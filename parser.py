@@ -166,11 +166,11 @@ ParserList = [
     retParser
 ]
 
-def parseStr(raw_instruction: str)-> int:
+def parseSingleInst(raw_instruction: str)-> int:
     vprint(raw_instruction)
     OP = raw_instruction.partition(' ')[0]
     # dotS support
-    OP, dotS, _= OP.partition('.')
+    OP, dotS, operands= OP.partition('.')
     if OP not in InstDict:
         errorExit("Invalid instruction: " + raw_instruction, -2)
     ind, opcode = InstDict[OP][0:2]
@@ -179,6 +179,8 @@ def parseStr(raw_instruction: str)-> int:
         errorExit("Invalid instruction: " + raw_instruction, -2)
     inst += opcode << 26
     if dotS:
+        if operands[0] != 'S' and operands[0] != 's':
+            errorExit("Invalid instruction: " + raw_instruction, -2)
         inst += (1 << 30)
     vprint('{:032b}'.format(inst))
     return inst
@@ -213,17 +215,18 @@ def processArgs():
                     instList.append(inst)
 
     vprint("\n------------ Recognized Instructions: ------------\n")
-    for inst in instList:
-        vprint(inst)
+    for i,inst in enumerate(instList):
+        vprint('{:>3d}'.format(i) + ": " + inst)
 
     vprint("\n--------------- Recognized Labels: ---------------\n")
     for key,value in labelDict.items():
-        vprint(key + ": " + instList[value])
+        vprint(str(value) + " " + key + ": " + instList[value])
 
     # parsing
     vprint("\n-------------- Parsing Instructions --------------\n")
     for inst in instList:
-        parseStr(inst)
+        parseSingleInst(inst)
+    vprint("\n---------------- Parsing Finished ----------------\n")
 
 def main():
     global verbose
