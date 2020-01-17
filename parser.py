@@ -55,6 +55,7 @@ InstDict = {
 # RET
     "RET":      (5, 0b000000)
     # TODO: JR $rs or RET?
+    # TODO: relative addressing / absolute addressing
 # TODO: ALLOCATE, EXIT, and NOOP
 }
 
@@ -63,84 +64,89 @@ def rTypeParser(raw_instruction: str)-> (bool, int):
     ret = InstDict[op.partition('.')[0]][2] # funct
 
     operands = operands.partition('$')[2]
-    if not operands:
+    reg = operands.partition(',')[0].strip()
+    if not reg:
         return False, 0
-    ret += int(operands[0]) << 11
-    # vprint("rd: " + operands[0])
+    ret += int(reg) << 11
+    vprint("rd: " + reg)
 
     operands = operands.partition('$')[2]
-    if not operands:
+    reg = operands.partition(',')[0].strip()
+    if not reg:
         return False, 0
-    ret += int(operands[0]) << 21
-    # vprint("rs: " + operands[0])
+    ret += int(reg) << 21
+    vprint("rs: " + reg)
 
-    operands = operands.partition('$')[2]
-    if not operands:
+    reg = operands.partition('$')[2].strip()
+    if not reg:
         return False, 0
-    ret += int(operands[0]) << 16
-    # vprint("rt: " + operands[0])
+    ret += int(reg) << 16
+    vprint("rt: " + reg)
     return True, ret
 
 def iTypeParser(raw_instruction: str)-> (bool, int):
     operands = raw_instruction.partition('$')[2]
-    if not operands:
+    reg = operands.partition(',')[0].strip()
+    if not reg:
         return False, 0
-    ret = int(operands[0]) << 16
-    # vprint("rt: " + operands[0])
+    ret = int(reg) << 16
+    vprint("rt: " + reg)
 
     operands = operands.partition('$')[2]
-    if not operands:
+    reg = operands.partition(',')[0].strip()
+    if not reg:
         return False, 0
-    ret += int(operands[0]) << 21
-    # vprint("rs: " + operands[0])
+    ret += int(reg) << 21
+    vprint("rs: " + reg)
 
-    operands = operands.partition(',')[2]
-    operands = operands.strip()
+    imme = operands.partition(',')[2].strip()
     if not operands:
         return False, 0
-    ret += int(operands) & 0xFFFF
-    # vprint("imme: " + operands)
+    ret += int(imme) & 0xFFFF
+    vprint("imme: " + imme)
     return True, ret
 
 def lsParser(raw_instruction: str)-> (bool, int):
     operands = raw_instruction.partition('$')[2]
-    if not operands:
+    reg = operands.partition(',')[0].strip()
+    if not reg:
         return False, 0
-    ret = int(operands[0]) << 16
-    # vprint("rt: " + operands[0])
+    ret = int(reg) << 16
+    vprint("rt: " + reg)
 
-    imme = operands.partition(',')[2].partition('(')[0]
+    imme = operands.partition(',')[2].partition('(')[0].strip()
     if not imme:
         return False, 0
     ret += int(imme) & 0xFFFF
-    # vprint("imme: " + imme)
+    vprint("imme: " + imme)
 
-    operands = operands.partition('$')[2]
-    if not operands:
+    reg = operands.partition('$')[2].partition(')')[0].strip()
+    if not reg:
         return False, 0
-    ret += int(operands[0]) << 21
-    # vprint("rs: " + operands[0])
+    ret += int(reg) << 21
+    vprint("rs: " + reg)
     return True, ret
 
 def brParser(raw_instruction: str)-> (bool, int):
     operands = raw_instruction.partition('$')[2]
-    if not operands:
+    reg = operands.partition(',')[0].strip()
+    if not reg:
         return False, 0
-    ret = int(operands[0]) << 21
-    # vprint("rs: " + operands[0])
+    ret = int(reg) << 21
+    vprint("rs: " + reg)
 
     operands = operands.partition('$')[2]
-    if not operands:
+    reg = operands.partition(',')[0].strip()
+    if not reg:
         return False, 0
-    ret += int(operands[0]) << 16
-    # vprint("rt: " + operands[0])
+    ret += int(reg) << 16
+    vprint("rt: " + reg)
 
-    operands = operands.partition(',')[2]
-    operands = operands.strip()
-    if operands not in labelDict:
+    label = operands.partition(',')[2].strip()
+    if label not in labelDict:
         return False, 0
-    ret += labelDict[operands] & 0xFFFF
-    # vprint("Tag: " + operands)
+    ret += labelDict[label] & 0xFFFF
+    vprint("Label: " + label)
     return True, ret
 
 def jParser(raw_instruction: str)-> (bool, int):
@@ -150,7 +156,7 @@ def jParser(raw_instruction: str)-> (bool, int):
     if not tokens[1] in labelDict:
         return False, 0
     ret = labelDict[tokens[1]]
-    # vprint("Tag: " + tokens[1])
+    vprint("Label: " + tokens[1])
     return True, ret
 
 def retParser(raw_instruction: str)-> (bool, int):
@@ -167,7 +173,7 @@ ParserList = [
 ]
 
 def parseSingleInst(raw_instruction: str)-> int:
-    vprint(raw_instruction)
+    print(raw_instruction)
     OP = raw_instruction.partition(' ')[0]
     # dotS support
     OP, dotS, operands= OP.partition('.')
@@ -182,7 +188,7 @@ def parseSingleInst(raw_instruction: str)-> int:
         if operands[0] != 'S' and operands[0] != 's':
             errorExit("Invalid instruction: " + raw_instruction, -2)
         inst += (1 << 30)
-    vprint('{:032b}'.format(inst))
+    print('{:032b}'.format(inst))
     return inst
 
 def processArgs():
