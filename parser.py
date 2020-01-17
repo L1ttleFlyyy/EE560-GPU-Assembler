@@ -14,6 +14,10 @@ verbose: bool = False
 
 filename: str = ""
 
+instList: list = []
+
+labelDict: dict = {}
+
 InstDict = {
 # R-type: (type, opcode, funct)
     "ADD":      (0, 0b000000, 0b100000),
@@ -46,9 +50,11 @@ InstDict = {
 # TODO: ALLOCATE, EXIT, and NOOP
 }
 
-class Instruction:
-    def __init__(self, raw_instruction: str):
-        pass
+def parseStr(raw_instruction: str)-> bool:
+    inst, _, comm = raw_instruction.partition(';')
+    print(inst)
+    print(comm)
+    return True
 
 def errorExit(msg: str, errno: int):
     print("Error: " + msg)
@@ -62,18 +68,36 @@ def printUsage():
     print(sys.argv[0] + " <assembly file>")
 
 def processArgs():
-    global filename
+    global filename, instList, labelDict
+    instList.clear()
+    labelDict.clear()
+
     if len(sys.argv) < 2:
         printUsage()
         errorExit("ASM file not specified",-1)
     filename = sys.argv[1]
     if not os.path.isfile(filename):
         errorExit(filename + " is not a valid file!", -1)
-    fileobj = open(filename, "r")
-    vprint(filename + " successfully opened")
-    for line in fileobj:
-        vprint(line)
-    
+
+    with open(filename, "r") as fileobj:
+        for line in fileobj.read().splitlines():
+            head = line.partition(';')[0]
+            head = head.strip()
+            if not head:
+                continue
+            if ':' not in head:
+                instList.append(head)
+            else:
+                label, _, inst = head.partition(':')
+                assert label and (label not in labelDict) and "Duplicate Labels!"
+                labelDict[label] = len(instList)
+                inst = inst.strip()
+                if inst:
+                    instList.append(inst)
+    for inst in instList:
+        vprint(inst)
+    for key,value in labelDict.items():
+        vprint(key + ": " + instList[value])
 
 def main():
     global verbose
