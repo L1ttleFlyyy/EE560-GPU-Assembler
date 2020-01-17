@@ -154,7 +154,7 @@ def jParser(raw_instruction: str)-> (bool, int):
     return True, ret
 
 def retParser(raw_instruction: str)-> (bool, int):
-    ret = 0
+    ret = 0 # TODO: ret Parser
     return True, ret
 
 ParserList = [
