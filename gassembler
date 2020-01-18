@@ -12,7 +12,7 @@ labelDict: dict = {}
 
 
 InputParser = argparse.ArgumentParser(description=info, formatter_class=argparse.RawDescriptionHelpFormatter)
-InputParser.add_argument("file", help= "path of the input assembly file", type=str)
+InputParser.add_argument("inputfile", help= "path of the input assembly file", type=str)
 InputParser.add_argument("-v", "--verbose", help="verbose", action="store_true")
 InputParser.add_argument("-x", help="output in bin(default)/hex", action="store_true")
 InputParser.add_argument("-o", metavar='outfile', help="path of the output binary file", type=str)
@@ -217,7 +217,7 @@ def main():
     instList.clear()
     labelDict.clear()
 
-    filename = options.file
+    filename = options.inputfile
     if not os.path.isfile(filename):
         errorExit(filename + " is not a valid file!", -1)
 
