@@ -1,29 +1,34 @@
 #!/usr/bin/python3
+import sys, os, argparse
 
-# EE560 GPU ISA Assembler (derived from MIPS32)
 
-# Author: Chang Xu (cxu925@usc.edu)
-
-# Date:    01/10/2020
-
-import sys, os
-
-verbose: bool = False
-
+info = """Description:
+    EE560 GPU ISA Assembler (derived from MIPS32)
+    Author: Chang Xu (cxu925@usc.edu)
+    Date: 01/10/2020
+"""
 instList: list = []
-
 labelDict: dict = {}
+
+
+InputParser = argparse.ArgumentParser(description=info, formatter_class=argparse.RawDescriptionHelpFormatter)
+InputParser.add_argument("file", help= "path of the input assembly file", type=str)
+InputParser.add_argument("-v", "--verbose", help="verbose", action="store_true")
+InputParser.add_argument("-x", help="output in bin(default)/hex", action="store_true")
+InputParser.add_argument("-o", metavar='outfile', help="path of the output binary file", type=str)
+options = InputParser.parse_args()
+
 
 def errorExit(msg: str, errno: int):
     print("Error: " + msg)
     exit(errno)
 
+
 def vprint(msg: str):
-    if verbose:
+    global options
+    if options.verbose:
         print(msg)
 
-def printUsage():
-    print(sys.argv[0] + " <assembly file>")
 
 InstDict = {
 # R-type: (type, opcode, funct)
@@ -59,6 +64,7 @@ InstDict = {
 # TODO: ALLOCATE, EXIT, and NOOP
 }
 
+
 def rTypeParser(raw_instruction: str)-> (bool, int):
     op, _, operands = raw_instruction.partition(' ')
     ret = InstDict[op.partition('.')[0]][2] # funct
@@ -84,6 +90,7 @@ def rTypeParser(raw_instruction: str)-> (bool, int):
     vprint("rt: " + reg)
     return True, ret
 
+
 def iTypeParser(raw_instruction: str)-> (bool, int):
     operands = raw_instruction.partition('$')[2]
     reg = operands.partition(',')[0].strip()
@@ -106,6 +113,7 @@ def iTypeParser(raw_instruction: str)-> (bool, int):
     vprint("imme: " + imme)
     return True, ret
 
+
 def lsParser(raw_instruction: str)-> (bool, int):
     operands = raw_instruction.partition('$')[2]
     reg = operands.partition(',')[0].strip()
@@ -126,6 +134,7 @@ def lsParser(raw_instruction: str)-> (bool, int):
     ret += int(reg) << 21
     vprint("rs: " + reg)
     return True, ret
+
 
 def brParser(raw_instruction: str)-> (bool, int):
     operands = raw_instruction.partition('$')[2]
@@ -149,6 +158,7 @@ def brParser(raw_instruction: str)-> (bool, int):
     vprint("Label: " + label)
     return True, ret
 
+
 def jParser(raw_instruction: str)-> (bool, int):
     tokens = raw_instruction.split()
     if not len(tokens) == 2:
@@ -159,9 +169,11 @@ def jParser(raw_instruction: str)-> (bool, int):
     vprint("Label: " + tokens[1])
     return True, ret
 
+
 def retParser(raw_instruction: str)-> (bool, int):
     ret = 0 # TODO: ret Parser
     return True, ret
+
 
 ParserList = [
     rTypeParser, 
@@ -172,8 +184,10 @@ ParserList = [
     retParser
 ]
 
-def parseSingleInst(raw_instruction: str)-> int:
-    print(raw_instruction)
+
+def parseSingleInst(raw_instruction: str)-> str:
+    global options
+    vprint(raw_instruction)
     OP = raw_instruction.partition(' ')[0]
     # dotS support
     OP, dotS, operands= OP.partition('.')
@@ -188,22 +202,26 @@ def parseSingleInst(raw_instruction: str)-> int:
         if operands[0] != 'S' and operands[0] != 's':
             errorExit("Invalid instruction: " + raw_instruction, -2)
         inst += (1 << 30)
-    print('{:032b}'.format(inst))
-    return inst
+    instParsed = ""
+    if not options.x:
+        instParsed = '{:032b}'.format(inst)
+    else:
+        instParsed = '0x{:08x}'.format(inst)
+    print(instParsed)
+    return instParsed
 
-def processArgs():
-    global instList, labelDict
+
+def main():
+    # processing args
+    global instList, labelDict, options
     instList.clear()
     labelDict.clear()
 
-    if len(sys.argv) < 2:
-        printUsage()
-        errorExit("ASM file not specified",-1)
-
-    filename = sys.argv[1]
+    filename = options.file
     if not os.path.isfile(filename):
         errorExit(filename + " is not a valid file!", -1)
 
+    # read input
     with open(filename, "r") as fileobj:
         for line in fileobj.read().splitlines():
             head = line.partition(';')[0]
@@ -220,24 +238,28 @@ def processArgs():
                 if inst:
                     instList.append(inst)
 
-    vprint("\n------------ Recognized Instructions: ------------\n")
-    for i,inst in enumerate(instList):
-        vprint('{:>3d}'.format(i) + ": " + inst)
+    # verbose informations
+    if options.verbose:
+        print("\n------------ Recognized Instructions: ------------\n")
+        for i,inst in enumerate(instList):
+            print('{:>3d}'.format(i) + " " + inst)
 
-    vprint("\n--------------- Recognized Labels: ---------------\n")
-    for key,value in labelDict.items():
-        vprint(str(value) + " " + key + ": " + instList[value])
+        print("\n--------------- Recognized Labels: ---------------\n")
+        for key,value in labelDict.items():
+            print('{:>3d}'.format(value) + " " + key + ": " + instList[value])
 
     # parsing
     vprint("\n-------------- Parsing Instructions --------------\n")
-    for inst in instList:
-        parseSingleInst(inst)
+    if options.o:
+        with open(options.o, "w") as outfileobj:
+            for inst in instList:
+                outfileobj.write(parseSingleInst(inst) + "\n")
+    else:
+        for inst in instList:
+            parseSingleInst(inst)
+
     vprint("\n---------------- Parsing Finished ----------------\n")
 
-def main():
-    global verbose
-    verbose = True
-    processArgs()
 
 if __name__ == "__main__":
     main()
