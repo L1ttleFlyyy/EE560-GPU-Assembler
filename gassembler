@@ -1,4 +1,4 @@
-#!/usr/bin/python3
+#!/usr/bin/env python3
 import sys, os, argparse
 
 
@@ -7,8 +7,6 @@ info = """Description:
     Author: Chang Xu (cxu925@usc.edu)
     Date: 01/10/2020
 """
-instList: list = []
-labelDict: dict = {}
 
 
 InputParser = argparse.ArgumentParser(description=info, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -30,6 +28,8 @@ def vprint(msg: str):
         print(msg)
 
 
+instList: list = []
+labelDict: dict = {}
 InstDict = {
 # R-type: (type, opcode, funct)
     "ADD":      (0, 0b000000, 0b100000),
@@ -202,11 +202,7 @@ def parseSingleInst(raw_instruction: str)-> str:
         if operands[0] != 'S' and operands[0] != 's':
             errorExit("Invalid instruction: " + raw_instruction, -2)
         inst += (1 << 30)
-    instParsed = ""
-    if not options.x:
-        instParsed = '{:032b}'.format(inst)
-    else:
-        instParsed = '0x{:08x}'.format(inst)
+    instParsed = '0x{:08x}'.format(inst) if options.x else '{:032b}'.format(inst)
     print(instParsed)
     return instParsed
 
@@ -214,8 +210,6 @@ def parseSingleInst(raw_instruction: str)-> str:
 def main():
     # processing args
     global instList, labelDict, options
-    instList.clear()
-    labelDict.clear()
 
     filename = options.inputfile
     if not os.path.isfile(filename):
@@ -257,7 +251,6 @@ def main():
     else:
         for inst in instList:
             parseSingleInst(inst)
-
     vprint("\n---------------- Parsing Finished ----------------\n")
 
 
