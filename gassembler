@@ -59,8 +59,8 @@ InstDict = {
     "CALL":     (4, 0b000011),
 # RET
     "RET":      (5, 0b000000)
-    # TODO: JR $rs or RET?
-    # TODO: relative addressing / absolute addressing
+    # TODO: opcode of RET
+    # TODO: NOOP same funct with SHL
 # TODO: ALLOCATE, EXIT, and NOOP
 }
 
@@ -171,7 +171,7 @@ def jParser(raw_instruction: str)-> (bool, int):
 
 
 def retParser(raw_instruction: str)-> (bool, int):
-    ret = 0 # TODO: ret Parser
+    ret = 0b001000
     return True, ret
 
 
