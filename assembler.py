@@ -1,0 +1,260 @@
+#!/usr/bin/env python3
+import sys, os, argparse
+
+
+info = """Description:
+    EE560 GPU ISA Assembler (derived from MIPS32)
+    Author: Chang Xu (cxu925@usc.edu)
+    Date: 01/10/2020
+"""
+
+
+InputParser = argparse.ArgumentParser(description=info, formatter_class=argparse.RawDescriptionHelpFormatter)
+InputParser.add_argument("inputfile", help= "path of the input assembly file", type=str)
+InputParser.add_argument("-v", "--verbose", help="verbose", action="store_true")
+InputParser.add_argument("-x", help="output in bin(default)/hex", action="store_true")
+InputParser.add_argument("-o", metavar='outfile', help="path of the output binary file", type=str)
+options = InputParser.parse_args()
+
+
+def errorExit(msg:str, errno:int):
+    print("Error: " + msg)
+    exit(errno)
+
+
+def vprint(msg:str):
+    global options
+    if options.verbose:
+        print(msg)
+
+
+instList: list = []
+labelDict: dict = {}
+InstDict = {
+# R-type: (type, opcode, funct)
+    "ADD":      (0, 0b000000, 0b100000),
+    "SUB":      (0, 0b000000, 0b100010),
+    "MULT":     (0, 0b000000, 0b011000),
+    "AND":      (0, 0b000000, 0b100100),
+    "OR":       (0, 0b000000, 0b100101),
+    "XOR":      (0, 0b000000, 0b100110),
+    "SHR":      (0, 0b000000, 0b000010),
+    "SHL":      (0, 0b000000, 0b000000),
+    # "DIV":      (0, 0b000000, 0b011010),
+# I-type: (type, opcode)
+    "ADDI":     (1, 0b001000),
+    "ANDI":     (1, 0b001100),
+    "ORI":      (1, 0b001101),
+    "XORI":     (1, 0b001110),
+# LW/ST
+    "LW":       (2, 0b100011),
+    "LWS":      (2, 0b100111),
+    "SW":       (2, 0b101011),
+    "SWS":      (2, 0b101111),
+# BEQ/BGT
+    "BEQ":      (3, 0b000100),
+    "BLT":      (3, 0b000111),
+# Jump/CALL
+    "J":        (4, 0b000010),
+    "CALL":     (4, 0b000011),
+# RET
+    "RET":      (5, 0b000110),
+	"NOOP":     (5, 0b000001),
+	"EXIT":     (5, 0b100001)
+    # TODO: opcode of RET
+    # TODO: NOOP same funct with SHL
+# TODO: ALLOCATE, EXIT, and NOOP
+}
+
+
+def rTypeParser(raw_instruction: str)-> (bool, int):
+    op, _, operands = raw_instruction.partition(' ')
+    ret = InstDict[op.partition('.')[0]][2] # funct
+
+    operands = operands.partition('$')[2]
+    reg = operands.partition(',')[0].strip()
+    if not reg:
+        return False, 0
+    ret += int(reg) << 11
+    vprint("rd: " + reg)
+
+    operands = operands.partition('$')[2]
+    reg = operands.partition(',')[0].strip()
+    if not reg:
+        return False, 0
+    ret += int(reg) << 21
+    vprint("rs: " + reg)
+
+    reg = operands.partition('$')[2].strip()
+    if not reg:
+        return False, 0
+    ret += int(reg) << 16
+    vprint("rt: " + reg)
+    return True, ret
+
+
+def iTypeParser(raw_instruction: str)-> (bool, int):
+    operands = raw_instruction.partition('$')[2]
+    reg = operands.partition(',')[0].strip()
+    if not reg:
+        return False, 0
+    ret = int(reg) << 16
+    vprint("rt: " + reg)
+
+    operands = operands.partition('$')[2]
+    reg = operands.partition(',')[0].strip()
+    if not reg:
+        return False, 0
+    ret += int(reg) << 21
+    vprint("rs: " + reg)
+
+    imme = operands.partition(',')[2].strip()
+    if not operands:
+        return False, 0
+    ret += int(imme) & 0xFFFF
+    vprint("imme: " + imme)
+    return True, ret
+
+
+def lsParser(raw_instruction: str)-> (bool, int):
+    operands = raw_instruction.partition('$')[2]
+    reg = operands.partition(',')[0].strip()
+    if not reg:
+        return False, 0
+    ret = int(reg) << 16
+    vprint("rt: " + reg)
+
+    imme = operands.partition(',')[2].partition('(')[0].strip()
+    if not imme:
+        return False, 0
+    ret += int(imme) & 0xFFFF
+    vprint("imme: " + imme)
+
+    reg = operands.partition('$')[2].partition(')')[0].strip()
+    if not reg:
+        return False, 0
+    ret += int(reg) << 21
+    vprint("rs: " + reg)
+    return True, ret
+
+
+def brParser(raw_instruction: str)-> (bool, int):
+    operands = raw_instruction.partition('$')[2]
+    reg = operands.partition(',')[0].strip()
+    if not reg:
+        return False, 0
+    ret = int(reg) << 21
+    vprint("rs: " + reg)
+
+    operands = operands.partition('$')[2]
+    reg = operands.partition(',')[0].strip()
+    if not reg:
+        return False, 0
+    ret += int(reg) << 16
+    vprint("rt: " + reg)
+
+    label = operands.partition(',')[2].strip()
+    if label not in labelDict:
+        return False, 0
+    ret += labelDict[label] & 0xFFFF
+    vprint("Label: " + label)
+    return True, ret
+
+
+def jParser(raw_instruction: str)-> (bool, int):
+    tokens = raw_instruction.split()
+    if not len(tokens) == 2:
+        return False, 0
+    if not tokens[1] in labelDict:
+        return False, 0
+    ret = labelDict[tokens[1]]
+    vprint("Label: " + tokens[1])
+    return True, ret
+
+
+def retParser(raw_instruction: str)-> (bool, int):
+    ret = 0b001000
+    return True, ret
+
+
+ParserList = [
+    rTypeParser, 
+    iTypeParser, 
+    lsParser, 
+    brParser, 
+    jParser, 
+    retParser
+]
+
+
+def parseSingleInst(raw_instruction: str)-> str:
+    global options
+    vprint(raw_instruction)
+    OP = raw_instruction.partition(' ')[0]
+    # dotS support
+    OP, dotS, operands= OP.partition('.')
+    if OP not in InstDict:
+        errorExit("Invalid instruction: " + raw_instruction, -2)
+    ind, opcode = InstDict[OP][0:2]
+    ret, inst = ParserList[ind](raw_instruction)
+    if not ret:
+        errorExit("Invalid instruction: " + raw_instruction, -2)
+    inst += opcode << 26
+    if dotS:
+        if operands[0] != 'S' and operands[0] != 's':
+            errorExit("Invalid instruction: " + raw_instruction, -2)
+        inst += (1 << 30)
+    instParsed = '0x{:08x}'.format(inst) if options.x else '{:032b}'.format(inst)
+    print(instParsed)
+    return instParsed
+
+
+def main():
+    # processing args
+    global instList, labelDict, options
+
+    filename = options.inputfile
+    if not os.path.isfile(filename):
+        errorExit(filename + " is not a valid file!", -1)
+
+    # read input
+    with open(filename, "r") as fileobj:
+        for line in fileobj.read().splitlines():
+            head = line.partition(';')[0]
+            head = head.strip()
+            if not head:
+                continue
+            if ':' not in head:
+                instList.append(head)
+            else:
+                label, _, inst = head.partition(':')
+                assert label and (label not in labelDict) and "Duplicate Labels!"
+                labelDict[label] = len(instList)
+                inst = inst.strip()
+                if inst:
+                    instList.append(inst)
+
+    # verbose informations
+    if options.verbose:
+        print("\n------------ Recognized Instructions: ------------\n")
+        for i,inst in enumerate(instList):
+            print('{:>3d}'.format(i) + " " + inst)
+
+        print("\n--------------- Recognized Labels: ---------------\n")
+        for key,value in labelDict.items():
+            print('{:>3d}'.format(value) + " " + key + ": " + instList[value])
+
+    # parsing
+    vprint("\n-------------- Parsing Instructions --------------\n")
+    if options.o:
+        with open(options.o, "w") as outfileobj:
+            for inst in instList:
+                outfileobj.write(parseSingleInst(inst) + "\n")
+    else:
+        for inst in instList:
+            parseSingleInst(inst)
+    vprint("\n---------------- Parsing Finished ----------------\n")
+
+
+if __name__ == "__main__":
+    main()
