@@ -17,12 +17,12 @@ InputParser.add_argument("-o", metavar='outfile', help="path of the output binar
 options = InputParser.parse_args()
 
 
-def errorExit(msg: str, errno: int):
+def errorExit(msg:str, errno:int):
     print("Error: " + msg)
     exit(errno)
 
 
-def vprint(msg: str):
+def vprint(msg:str):
     global options
     if options.verbose:
         print(msg)
@@ -40,7 +40,7 @@ InstDict = {
     "XOR":      (0, 0b000000, 0b100110),
     "SHR":      (0, 0b000000, 0b000010),
     "SHL":      (0, 0b000000, 0b000000),
-    "DIV":      (0, 0b000000, 0b011010),
+    # "DIV":      (0, 0b000000, 0b011010),
 # I-type: (type, opcode)
     "ADDI":     (1, 0b001000),
     "ANDI":     (1, 0b001100),
@@ -51,17 +51,17 @@ InstDict = {
     "LWS":      (2, 0b100111),
     "SW":       (2, 0b101011),
     "SWS":      (2, 0b101111),
-# BEQ/BGT
+# BEQ/BLT
     "BEQ":      (3, 0b000100),
-    "BGT":      (3, 0b000111),
+    "BLT":      (3, 0b000111),
 # Jump/CALL
     "J":        (4, 0b000010),
     "CALL":     (4, 0b000011),
 # RET
-    "RET":      (5, 0b000000)
-    # TODO: opcode of RET
-    # TODO: NOOP same funct with SHL
-# TODO: ALLOCATE, EXIT, and NOOP
+    "RET":      (5, 0b000110),
+	"NOOP":     (5, 0b000001),
+	"EXIT":     (5, 0b100001)
+    # TODO: NOOP same funct
 }
 
 
@@ -256,3 +256,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+    
