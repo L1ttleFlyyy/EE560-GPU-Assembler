@@ -229,7 +229,7 @@ def parseSingleInst(raw_instruction: str)-> str:
         if operands[0] != 'S' and operands[0] != 's':
             errorExit("Invalid instruction: " + raw_instruction, -2)
         inst += (1 << 30)
-    instParsed = '0x{:08x}'.format(inst) if options.x else '{:032b}'.format(inst)
+    instParsed = '{:08x}'.format(inst) if options.x else '{:032b}'.format(inst)
     print(instParsed)
     return instParsed
 

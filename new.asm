@@ -1,6 +1,6 @@
 SUB $0, $0, $0; hard zero
-ADD $1, $8, $16; global thrID
-ADDI $2, $0, 2; shamt
-SHL $3, $1, $2; mem location = thrID * 4
-SW $1, 0($3); store thrID to corresponding location
+SHL $1, $16, 3; warpID * 8
+ADD $2, $8, $1; global thrID
+SHL $3, $2, 2; mem location = thrID * 4
+SW $3, 0($3); store thrID to corresponding location
 EXIT
