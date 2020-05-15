@@ -60,10 +60,7 @@ InstDict = {
 # RET
     "RET":      (5, 0b000110),
 	"NOOP":     (5, 0b000001),
-	"EXIT":     (5, 0b100001),
-# Shift: (type, opcode, funct)
-    "SHR":      (6, 0b000000, 0b000010),
-    "SHL":      (6, 0b000000, 0b000000)
+	"EXIT":     (5, 0b100001)
     # TODO: NOOP same funct
 }
 
@@ -177,29 +174,6 @@ def retParser(raw_instruction: str)-> (bool, int):
     ret = 0b001000
     return True, ret
 
-def shiftParser(raw_instruction: str)-> (bool, int):
-    op, _, operands = raw_instruction.partition(' ')
-    ret = InstDict[op.partition('.')[0]][2] # funct
-    operands = raw_instruction.partition('$')[2]
-    reg = operands.partition(',')[0].strip()
-    if not reg:
-        return False, 0
-    ret += int(reg) << 16
-    vprint("rt: " + reg)
-
-    operands = operands.partition('$')[2]
-    reg = operands.partition(',')[0].strip()
-    if not reg:
-        return False, 0
-    ret += int(reg) << 21
-    vprint("rs: " + reg)
-
-    imme = operands.partition(',')[2].strip()
-    if not operands:
-        return False, 0
-    ret += (int(imme) & 0x1F) << 6
-    vprint("shamt: " + imme)
-    return True, ret
 
 ParserList = [
     rTypeParser, 
@@ -207,8 +181,7 @@ ParserList = [
     lsParser, 
     brParser, 
     jParser, 
-    retParser,
-    shiftParser
+    retParser
 ]
 
 
