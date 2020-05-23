@@ -1,6 +1,6 @@
-			XOR $0, $0, $0 				; AM = 1111_1111 , clear $0 register
-			LW $1, 10($0) 				; AM = 1111_1111 , load x
-			LW $2, 20($0) 				; AM = 1111_1111 , load y
+			XOR $0, $0, $0 			; AM = 1111_1111 , clear $0 register
+			ADDI $1, $0, 7 			; AM = 1111_1111 , load x
+			ADDI $2, $0, 15 		; AM = 1111_1111 , load y
 			ADDI $3, $0, 4 			; AM = 1111_1111 , $3=4
 
 			BLT.S $8, $3, Thread0123 ; AM = 1111_1111 , threads 4567 continues
@@ -75,3 +75,4 @@ Merge01234567:
 			NOOP.S 						; Synchronization point
 
 			SW $5, 30($0)				; store z
+			EXIT

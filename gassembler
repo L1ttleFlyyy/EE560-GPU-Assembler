@@ -173,7 +173,7 @@ def jParser(raw_instruction: str)-> (bool, int):
 
 
 def retParser(raw_instruction: str)-> (bool, int):
-    ret = 0b001000
+    ret = 0b000000 #basically do nothing
     return True, ret
 
 
