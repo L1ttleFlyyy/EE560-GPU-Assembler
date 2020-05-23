@@ -153,6 +153,7 @@ def brParser(raw_instruction: str)-> (bool, int):
 
     label = operands.partition(',')[2].strip()
     if label not in labelDict:
+        errorExit('label ' + label + ' is invalid', -2)
         return False, 0
     ret += labelDict[label] & 0xFFFF
     vprint("Label: " + label)
@@ -164,6 +165,7 @@ def jParser(raw_instruction: str)-> (bool, int):
     if not len(tokens) == 2:
         return False, 0
     if not tokens[1] in labelDict:
+        errorExit('label ' + tokens[1] + ' is invalid', -2)
         return False, 0
     ret = labelDict[tokens[1]]
     vprint("Label: " + tokens[1])
