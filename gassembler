@@ -238,11 +238,11 @@ def main():
     if options.verbose:
         print("\n------------ Recognized Instructions: ------------\n")
         for i,inst in enumerate(instList):
-            print('{:>3d}'.format(i) + " " + inst)
+            print('{:>3x}'.format(i) + ' : {:>3d}'.format(i) + " " + inst)
 
         print("\n--------------- Recognized Labels: ---------------\n")
         for key,value in labelDict.items():
-            print('{:>3d}'.format(value) + " " + key + ": " + instList[value])
+            print('{:>3x}'.format(value) + ' : {:>3d}'.format(value) + " " + key + ": " + instList[value])
 
     # parsing
     vprint("\n-------------- Parsing Instructions --------------\n")
